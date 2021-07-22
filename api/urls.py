@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import AtivosAPIView
+from .views import AtivosView
 
 urlpatterns = [
-	path('user/ativos', AtivosAPIView.as_view()),
+	path('user/ativos', AtivosView.as_view()),
 ]
