@@ -11,3 +11,17 @@ class Ativo(models.Model):
 
 	def __str__(self):
 		return self.nome
+
+
+class Resgate(models.Model):
+	ativo = models.ForeignKey('Ativo', on_delete=models.PROTECT)
+	data_de_solicitacao = models.DateField(auto_now_add=True)
+	quantidade = models.PositiveIntegerField()
+	preco_unitario_em_centavos = models.PositiveIntegerField()
+
+
+class Aplicacao(models.Model):
+	ativo = models.ForeignKey('Ativo', on_delete=models.PROTECT)
+	data_de_solicitacao = models.DateField(auto_now_add=True)
+	quantidade = models.PositiveIntegerField()
+	preco_unitario_em_centavos = models.PositiveIntegerField()
