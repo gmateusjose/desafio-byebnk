@@ -12,7 +12,6 @@ class CarteiraView(APIView):
 		return Response()
 
 
-
 class AtivosView(generics.ListCreateAPIView):
 	queryset = Ativo.objects.all()
 	serializer_class = AtivoSerializer
