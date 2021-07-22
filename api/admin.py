@@ -1,6 +1,5 @@
 from django.contrib import admin
-from .models import Ativo, Resgate, Aplicacao
+from .models import Ativo, Operacao
 
 admin.site.register(Ativo)
-admin.site.register(Resgate)
-admin.site.register(Aplicacao)
+admin.site.register(Operacao)
