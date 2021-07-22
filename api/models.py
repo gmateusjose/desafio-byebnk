@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class Ativo(models.Model):
 	MODALIDADES_DISPONIVEIS = (
 		('RENDA FIXA', 'RENDA FIXA'),

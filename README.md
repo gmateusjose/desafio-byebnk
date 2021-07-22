@@ -8,7 +8,7 @@
 | `POST api/user/ativos` | Nome, Modalidade | |
 | `GET  api/user/aplicacoes` | | Todas as aplicacoes do user |
 | `POST api/user/aplicacoes` | Ativo, Quantidade, Preco Unitario | |
-| `GET api/user/resgates` | | Todas os resgates do user |
+| `GET api/user/resgates` | | Todos os resgates do user |
 | `POST api/user/resgates` | Ativo, Quantidade, Preco Unitario | |
 
 ## How to access the admin page?
