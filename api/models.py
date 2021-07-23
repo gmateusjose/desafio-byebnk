@@ -26,3 +26,6 @@ class Operacao(models.Model):
 	data_de_solicitacao = models.DateField(auto_now_add=True)
 	quantidade = models.PositiveIntegerField()
 	preco_unitario_em_centavos = models.PositiveIntegerField()
+
+	def __str__(self):
+		return f'Operacao {self.id}'

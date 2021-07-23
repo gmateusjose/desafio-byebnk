@@ -2,7 +2,7 @@ from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from .models import Ativo, Operacao
+from .models import Ativo, Operacao, User
 from .serializers import AtivoSerializer, OperacaoSerializer
 
 
@@ -26,4 +26,22 @@ class OperacoesView(generics.ListCreateAPIView):
 
 class CarteiraView(APIView):
 	def get(self, request, format=None):
-		return Response()
+		usuario_atual = User.objects.get(pk=request.user.id)
+		aplicacoes_realizadas = Operacao.objects.filter(operacao='APLICACAO', usuario=request.user.id)
+		resgates_realizados = Operacao.objects.filter(operacao='RESGATE', usuario=request.user.id)
+
+		sum_aplicacoes = 0
+		for aplicacao in aplicacoes_realizadas:
+			sum_aplicacoes += (aplicacao.quantidade * aplicacao.preco_unitario_em_centavos)
+
+		sum_resgates = 0
+		for resgate in resgates_realizados:
+			sum_resgates += (resgate.quantidade * resgate.preco_unitario_em_centavos)
+
+		dados_carteira = {
+			'usuario': usuario_atual.username, 
+			'saldo': sum_aplicacoes - sum_resgates, 
+			'aplicacoes': len(aplicacoes_realizadas), 
+			'resgates': len(resgates_realizados)
+		}
+		return Response(dados_carteira)
