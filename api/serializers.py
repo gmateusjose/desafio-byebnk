@@ -5,16 +5,14 @@ from .models import Ativo, Operacao
 class AtivoSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Ativo
-		fields = ('nome', 'modalidade')
+		fields = '__all__'
 
 
 class OperacaoSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = Operacao
-		fields = (
-			'operacao', 
-			'ativo', 
-			'data_de_solicitacao', 
-			'quantidade', 
-			'preco_unitario_em_centavos',
-		)
+		fields = '__all__'
+
+	usuario = serializers.HiddenField(
+		default=serializers.CurrentUserDefault()
+	)
