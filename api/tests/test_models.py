@@ -1,53 +1,93 @@
 from django.test import TestCase
-
+from django.core.exceptions import ValidationError
 from api.models import Ativo, Operacao, User
 
 
 class TestAtivoModel(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.nome_ativo = 'ATIVO TESTE'
+        cls.modalidades_disponiveis = [
+            'RENDA FIXA', 
+            'RENDA VARIAVEL', 
+            'CRIPTO'
+        ]
+
     def test_criar_ativo_com_modalidades_disponiveis(self):
-        for modalidade in ['RENDA FIXA', 'RENDA VARIAVEL', 'CRIPTO']:
-            ativo_avulso = Ativo.objects.create(nome=f'test {modalidade}', modalidade=f'{modalidade}')
+        """
+        Verificar se os Ativos sao criados com sucesso
+        """
+        for modalidade in self.modalidades_disponiveis:
+            ativo_avulso = Ativo.objects.create(
+                nome=self.nome_ativo, 
+                modalidade=modalidade
+            )
             ativo_avulso.save()
-        self.assertEqual(Ativo.objects.count(), 3)
+        total_ativos = Ativo.objects.count()
+        self.assertEqual(total_ativos, len(self.modalidades_disponiveis))
 
     def test_criar_ativo_com_modalidade_nao_disponivel(self):
-        ativo_avulso = Ativo.objects.create(nome=f'test ativo', modalidade='NOT EXISTENT')
+        """
+        Nao devem ser criados ativos cuja modalidade nao pertencam a lista
+        de modalidades disponiveis.
+        """
+        self.assertRaises(
+            ValidationError, 
+            Ativo.objects.create, 
+            nome=self.nome_ativo, 
+            modalidade='NOT EXISTENT'
+        )
+    
+    def test_salvar_ativo_com_modalidade_nao_disponivel(self):
+        """
+        Ativos ja criados nao podem ter modalidade alterada para uma modalidade
+        nao disponivel.
+        """
+        ativo_avulso = Ativo.objects.create(
+            nome=self.nome_ativo, 
+            modalidade='CRIPTO'
+        )
         ativo_avulso.save()
-        self.assertEqual(Ativo.objects.get().modalidade, 'NOT EXISTENT')
+        ativo_avulso.modalidade = 'NOT EXISTENT'
+        self.assertRaises(ValidationError, ativo_avulso.save)
 
 
 class TestOperacaoModel(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.usuario = User.objects.create(username='user', password='abc123')
-        cls.usuario.save()
-
-        cls.ativo_avulso = Ativo.objects.create(nome='BITCOIN', modalidade='CRIPTO')
-        cls.ativo_avulso.save()
-
-        cls.quantidade_avulsa = 5
-        cls.preco_avulso = 10
+        usuario = User.objects.create(username='user', password='abc123')
+        ativo_avulso = Ativo.objects.create(nome='BNB', modalidade='CRIPTO')
+        usuario.save() 
+        ativo_avulso.save()
+        cls.operacoes_disponiveis = ['APLICACAO', 'RESGATE']
+        cls.dados_base = {
+            'usuario': usuario,
+            'ativo': ativo_avulso,
+            'quantidade': 10,
+            'preco_unitario_em_centavos': 5
+        }
 
     def test_criar_operacao_com_operacoes_disponiveis(self):
-        for operacao in ['APLICACAO', 'RESGATE']:
+        """
+        Criar operacoes com os tipos 'APLICACAO' e 'RESGATE'.
+        """
+        for operacao in self.operacoes_disponiveis:
             operacao_avulsa = Operacao.objects.create(
-                usuario=self.usuario,
-                operacao=operacao,
-                ativo=self.ativo_avulso,
-                quantidade=self.quantidade_avulsa,
-                preco_unitario_em_centavos=self.preco_avulso,
+                operacao=operacao, 
+                **self.dados_base
             )
             operacao_avulsa.save()
-        self.assertEqual(Operacao.objects.count(), 2)
+        total_operacoes=Operacao.objects.count()
+        self.assertEqual(total_operacoes, len(self.operacoes_disponiveis))
             
-
     def test_criar_operacao_nao_disponivel(self):
-        operacao_avulsa = Operacao.objects.create(
-            usuario=self.usuario,
-            operacao='NOT EXISTENT',
-            ativo=self.ativo_avulso,
-            quantidade=self.quantidade_avulsa,
-            preco_unitario_em_centavos=self.preco_avulso,
+        """
+        Nao devem ser criadas operacoes cujo tipos nao estejam definidos como
+        'APLICACAO' ou 'RESGATE'.
+        """
+        self.assertRaises(
+            ValidationError, 
+            Operacao.objects.create, 
+            operacao='NOT EXISTENT', 
+            **self.dados_base
         )
-        operacao_avulsa.save()
-        self.assertEqual(Operacao.objects.get().operacao, 'NOT EXISTENT')

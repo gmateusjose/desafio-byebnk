@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.contrib.auth.models import User
 
@@ -14,6 +15,14 @@ class Ativo(models.Model):
 	def __str__(self):
 		return self.nome
 
+	def clean(self):
+		if (self.modalidade, self.modalidade) not in self.MODALIDADES_DISPONIVEIS:
+			raise ValidationError({'modalidade': 'Modalidade does not exist'})
+
+	def save(self, *args, **kwargs):
+		self.clean()
+		super().save(*args, **kwargs)
+
 
 class Operacao(models.Model):
 	OPERACOES_DISPONIVEIS = (
@@ -29,3 +38,11 @@ class Operacao(models.Model):
 
 	def __str__(self):
 		return f'Operacao {self.id}'
+
+	def clean(self):
+		if (self.operacao, self.operacao) not in self.OPERACOES_DISPONIVEIS:
+			raise ValidationError({'operacao': 'operacao does not exist'})
+
+	def save(self, *args, **kwargs):
+		self.clean()
+		super().save(*args, **kwargs)
