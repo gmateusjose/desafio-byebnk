@@ -37,18 +37,88 @@ class AtivosTestCase(APITestCase):
 
 
 class OperacoesTestCase(APITestCase):
-    # Como um USUARIO eu gostaria de FAZER APLICACOES EM UM ATIVO para INICIAR
-    # UM INVESTIMENTO.
-    
-    # Como um USUARIO eu gostaria de FAZER APLICACOES EM ATIVOS CADASTRADOS POR 
-    # OUTROS USUARIOS para visualizar as melhores opcoes de ativos
-     
-    # Como um USUARIO eu gostaria de FAZER RESGATES EM UM ATIVO para RETIRAR O
-    # MEU LUCRO.
+    @classmethod
+    def setUpTestData(cls):
+        cls.usuario = User.objects.create(username='user', password='abc123')
+        cls.usuario.save()
 
-    # Usuario nao pode ver operacoes de outros usuarios
-    pass
+        cls.ativo_avulso = Ativo.objects.create(nome="BITCOIN", modalidade="CRIPTO")
+        cls.ativo_avulso.save()
 
+        operacao_avulsa = Operacao.objects.create(
+            usuario=cls.usuario,
+            operacao="APLICACAO",
+            ativo=cls.ativo_avulso,
+            quantidade=3,
+            preco_unitario_em_centavos=100
+
+        )
+        operacao_avulsa.save()
+
+    def setUp(self):
+        self.client.force_authenticate(user=self.usuario)
+
+    def test_realizar_aplicacao_em_ativo(self):
+        """
+        Como um USUARIO eu gostaria de FAZER APLICACOES EM UM ATIVO
+        para INICIAR UM INVESTIMENTO
+        """
+        post_data = {
+            'operacao': 'APLICACAO',
+            'ativo': self.ativo_avulso,
+            'quantidade': 10,
+            'preco_unitario_em_centavos': 500,
+        }
+        response = self.client.post('/api/operacoes', post_data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Operacao.objects.count(), 1)
+
+    def test_realizar_resgate_em_ativo(self):
+        """
+        Como um USUARIO eu gostaria de FAZER RESGATES EM UM ATIVO 
+        para RETIRAR O MEU LUCRO
+        """
+        post_data = {
+            'operacao': 'RESGATE',
+            'ativo': self.ativo_avulso,
+            'quantidade': 10,
+            'preco_unitario_em_centavos': 200,
+        }
+        response = self.client.post('/api/operacoes', post_data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Operacao.objects.count(), 1)
+
+    def test_realizar_aplicacao_em_ativo_de_outro_usuario(self):
+        """
+        Como USUARIO eu gostaria de FAZER APLICACOES EM UM ATIVO 
+        DE OUTRO USUARIO para RETIRAR O MEU LUCRO.
+        """
+        second_user = User.objects.create(username='user2', password='abc123')
+        second_user.save()
+
+        self.client.force_authenticate(user=second_user)
+        post_data = {'nome': 'CDB', 'modalidade': 'RENDA FIXA'}
+        self.client.post('/api/ativos', post_data)
+
+        self.client.force_authenticate(user=self.usuario)
+        post_data = {
+            'operacao': 'APLICACAO',
+            'ativo': Ativo.objects.get(nome='CDB'),
+            'quantidade': 5,
+            'preco_unitario_em_centavos': 30,
+        }
+        response = self.client.post('/api/operacoes', post_data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Operacao.objects.count(), 1)
+
+    def test_usuario_visualiza_apenas_suas_operacoes(self):
+        """
+        Como USUARIO eu gostaria de VISUALIZAR APENAS MINHAS OPERACOES
+        para ATESTAR A SEGURANCA DA APLICACAO
+        """
+        response = self.client.get('/api/operacoes')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['operacao'], 'user')
 
 class CarteiraTestCase(APITestCase):
     @classmethod
