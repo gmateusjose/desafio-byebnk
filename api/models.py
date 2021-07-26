@@ -36,6 +36,7 @@ class Operacao(models.Model):
 	data_de_solicitacao = models.DateField(auto_now_add=True)
 	quantidade = models.PositiveIntegerField()
 	preco_unitario_em_centavos = models.PositiveIntegerField()
+	endereco_ip = models.GenericIPAddressField(null=True, blank=True)
 
 	def __str__(self):
 		return f'Operacao {self.id}'

@@ -127,6 +127,17 @@ class OperacoesTestCase(ConfiguracaoDeTestes):
             operacao = Operacao.objects.get(pk=operacao_id)
             self.assertEqual(operacao.usuario.id, self.usuario.id)
 
+    def test_salva_endereco_ip_usuario_na_operacao(self):
+        """
+        Como USUARIO eu gostaria de VISUALIZAR O MEU ENDERECO DE IP para
+        ATESTAR A SEGURANCA DA APPLICACAO
+        """
+        endereco_ip_client = self.client._base_environ()['REMOTE_ADDR']
+        self.dados_base_operacao['operacao'] = 'RESGATE'
+        self.dados_base_operacao['ativo'] = self.ativo.id
+        response = self.client.post('/api/operacoes', self.dados_base_operacao)
+        self.assertEqual(response.data['endereco_ip'], endereco_ip_client)
+
 
 class CarteiraTestCase(ConfiguracaoDeTestes):
     @classmethod

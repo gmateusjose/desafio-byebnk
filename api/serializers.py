@@ -17,3 +17,7 @@ class OperacaoSerializer(serializers.ModelSerializer):
 	usuario = serializers.HiddenField(
 		default=serializers.CurrentUserDefault()
 	)
+	endereco_ip = serializers.SerializerMethodField()
+
+	def get_endereco_ip(self, obj):
+		return f"{self.context['request'].META['REMOTE_ADDR']}"
