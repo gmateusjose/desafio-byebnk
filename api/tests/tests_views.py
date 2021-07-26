@@ -4,78 +4,75 @@ from rest_framework import status
 from api.models import User, Ativo, Operacao
 
 
-class AtivosTestCase(APITestCase):
+class ConfiguracaoDeTestes(APITestCase):
     @classmethod
     def setUpTestData(cls):
         cls.usuario = User.objects.create(username="user", password="abc123")
         cls.usuario.save()
-        cls.dados_ativo = {'nome': 'BITCOIN', 'modalidade': 'CRIPTO'}
+        cls.ativo = Ativo.objects.create(nome="BNB", modalidade='CRIPTO')
+        cls.ativo.save()
 
     def setUp(self):
         self.client.force_authenticate(user=self.usuario)
 
+
+class AtivosTestCase(ConfiguracaoDeTestes):
     def test_cadastro_com_nome_e_modalidade_corretos(self):
         """
         Como USUARIO eu gostaria de CADASTRAR UM ATIVO para REAZLIZAR 
         APLICACOES/RESGATES.
         """
-        novo_total_ativos = 1
-        response = self.client.post('/api/ativos', self.dados_ativo)
+        novo_total_ativos = 2
+        dados_ativo = {'nome': 'BTC', 'modalidade': 'CRIPTO'}
+        response = self.client.post('/api/ativos', dados_ativo)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Ativo.objects.count(), novo_total_ativos)
 
+    def test_acessar_ativos_usuario(self):
+        """
+        Como USUARIO gostaria de ACESSAR TODOS OS ATIVOS QUE JA OPEREI para
+        COMPREENDER A SITUACAO DOS MEUS INVESTIMENTOS.
+        """
+        response = self.client.get('/api/ativos')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
     def test_visualizar_todos_ativos_cadastrados(self):
         """
-        Como USUARIO eu gostaria de VISUALIZAR TODOS OS ATIVOS para SABER AS 
-        OPCOES DISPONIVEIS PARA APLICACAO
+        Como USUARIO eu gostaria de VISUALIZAR TODOS OS DADOS DOS ATIVOS para
+        SABER AS OPCOES DISPONIVEIS PARA APLICACAO
         """
-        ativo_avulso = Ativo.objects.create(**self.dados_ativo)
-        ativo_avulso.save()
         response = self.client.get('/api/ativos')
-        dados_finais = response.data[0]
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(dados_finais['id'], 1)
-        self.assertEqual(dados_finais['nome'], 'BITCOIN')
-        self.assertEqual(dados_finais['modalidade'], 'CRIPTO')
+        dados_finais_response = response.data[0]
+        self.assertEqual(dados_finais_response['id'], 1)
+        self.assertEqual(dados_finais_response['nome'], 'BNB')
+        self.assertEqual(dados_finais_response['modalidade'], 'CRIPTO')
 
 
-class OperacoesTestCase(APITestCase):
+class OperacoesTestCase(ConfiguracaoDeTestes):
     @classmethod
     def setUpTestData(cls):
-        cls.usuario = User.objects.create(username='user', password='abc123')
-        cls.ativo_avulso = Ativo.objects.create(
-            nome="BITCOIN", 
-            modalidade="CRIPTO"
-        )
-        cls.usuario.save()        
-        cls.ativo_avulso.save()
-
+        super().setUpTestData()
+        cls.dados_base_operacao = {
+            'usuario': cls.usuario,
+            'ativo': cls.ativo,
+            'quantidade': 3,
+            'preco_unitario_em_centavos': 100
+        }
         operacao_avulsa = Operacao.objects.create(
-            usuario=cls.usuario,
             operacao="APLICACAO",
-            ativo=cls.ativo_avulso,
-            quantidade=3,
-            preco_unitario_em_centavos=100
-
+            **cls.dados_base_operacao
         )
         operacao_avulsa.save()
-
-    def setUp(self):
-        self.client.force_authenticate(user=self.usuario)
 
     def test_realizar_aplicacao_em_ativo(self):
         """
         Como um USUARIO eu gostaria de FAZER APLICACOES EM UM ATIVO para 
         INICIAR UM INVESTIMENTO
         """
-        post_data = {
-            'operacao': 'APLICACAO',
-            'ativo': self.ativo_avulso.id,
-            'quantidade': 10,
-            'preco_unitario_em_centavos': 500,
-        }
         novo_total_operacoes = 2
-        response = self.client.post('/api/operacoes', post_data)
+        self.dados_base_operacao['ativo'] = self.ativo.id
+        self.dados_base_operacao['operacao'] = 'APLICACAO'
+        response = self.client.post('/api/operacoes', self.dados_base_operacao)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Operacao.objects.count(), novo_total_operacoes)
 
@@ -84,14 +81,10 @@ class OperacoesTestCase(APITestCase):
         Como um USUARIO eu gostaria de FAZER RESGATES EM UM ATIVO para RETIRAR
         O MEU LUCRO
         """
-        post_data = {
-            'operacao': 'RESGATE',
-            'ativo': self.ativo_avulso.id,
-            'quantidade': 10,
-            'preco_unitario_em_centavos': 200,
-        }
         novo_total_operacoes = 2
-        response = self.client.post('/api/operacoes', post_data)
+        self.dados_base_operacao['operacao'] = 'RESGATE'
+        self.dados_base_operacao['ativo'] = self.ativo.id
+        response = self.client.post('/api/operacoes', self.dados_base_operacao)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Operacao.objects.count(), novo_total_operacoes)
 
@@ -102,18 +95,13 @@ class OperacoesTestCase(APITestCase):
         """
         second_user = User.objects.create(username='user2', password='abc123')
         second_user.save()
-        self.client.force_authenticate(user=second_user)        
-        post_data = {'nome': 'CDB', 'modalidade': 'RENDA FIXA'}
-        self.client.post('/api/ativos', post_data)
-        self.client.force_authenticate(user=self.usuario)
-        post_data = {
-            'operacao': 'APLICACAO',
-            'ativo': Ativo.objects.get(nome='CDB').id,
-            'quantidade': 5,
-            'preco_unitario_em_centavos': 30,
-        }
+        self.client.force_authenticate(user=second_user)
+
+        self.dados_base_operacao['operacao'] = 'APLICACAO'
+        self.dados_base_operacao['ativo'] = self.ativo.id
+        response = self.client.post('/api/operacoes', self.dados_base_operacao)
+
         novo_total_operacoes = 2
-        response = self.client.post('/api/operacoes', post_data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Operacao.objects.count(), novo_total_operacoes)
 
@@ -130,34 +118,33 @@ class OperacoesTestCase(APITestCase):
             self.assertEqual(operacao.usuario.id, self.usuario.id)
 
 
-class CarteiraTestCase(APITestCase):
+class CarteiraTestCase(ConfiguracaoDeTestes):
     @classmethod
     def setUpTestData(cls):
-        cls.usuario = User.objects.create(username='user', password='abc123')
-        ativo_avulso = Ativo.objects.create(nome='BITCOIN', modalidade='CRIPTO')
-        cls.usuario.save()
-        ativo_avulso.save()
+        super().setUpTestData()
+        dados_base_operacao = {
+            'usuario': cls.usuario,
+            'ativo': cls.ativo,
+            'quantidade': 20,
+            'preco_unitario_em_centavos': 100
+        }
 
         aplicacao = Operacao.objects.create(
-            usuario=cls.usuario,
-            operacao='APLICACAO',
-            ativo=ativo_avulso,
-            quantidade=20,
-            preco_unitario_em_centavos=100
+            operacao='APLICACAO', 
+            **dados_base_operacao
         )
         aplicacao.save()
 
+        dados_base_operacao['quantidade'] = 10
+        dados_base_operacao['preco_unitario_em_centavos'] = 50
         resgate = Operacao.objects.create(
-            usuario=cls.usuario,
             operacao='RESGATE',
-            ativo=ativo_avulso,
-            quantidade=10,
-            preco_unitario_em_centavos=50
+            **dados_base_operacao
         )
         resgate.save()
 
     def setUp(self):
-        self.client.force_authenticate(self.usuario)
+        super().setUp()
         self.response = self.client.get('/api/carteira')
 
     def test_acessar_carteira(self):
@@ -172,8 +159,11 @@ class CarteiraTestCase(APITestCase):
         Como USUARIO gostaria de VISUALIZAR O SALDO DA MINHA CARTEIRA para 
         ACOMPANHAR OS MEUS RESULTADOS.
         """
-        saldo_final = 1500
-        self.assertEqual(self.response.data['saldo'], saldo_final)
+        saldo_final_manualmente_calculado = 1500
+        self.assertEqual(
+            self.response.data['saldo'], 
+            saldo_final_manualmente_calculado
+        )
     
     def test_visualizar_total_de_aplicacoes(self):
         """

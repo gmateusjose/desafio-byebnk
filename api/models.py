@@ -16,7 +16,8 @@ class Ativo(models.Model):
 		return self.nome
 
 	def clean(self):
-		if (self.modalidade, self.modalidade) not in self.MODALIDADES_DISPONIVEIS:
+		tupla_modalidades = (self.modalidade, self.modalidade)
+		if tupla_modalidades not in self.MODALIDADES_DISPONIVEIS:
 			raise ValidationError({'modalidade': 'Modalidade does not exist'})
 
 	def save(self, *args, **kwargs):
