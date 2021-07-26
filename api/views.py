@@ -11,6 +11,8 @@ class AtivosView(generics.ListCreateAPIView):
 	serializer_class = AtivoSerializer
 
 
+# TODO: NAO PERMITIR QUE SEJA FEITA MAIS RESGATES DO QUE APLICACOES, IMPEDINDO O
+# SALDO NEGATIVO!!!
 class OperacoesView(generics.ListCreateAPIView):
 	# Aplicar filter diretamente não funcionaria uma vez que o request não está
 	# definido no momento da declaração da classe, e como o request é uma property
