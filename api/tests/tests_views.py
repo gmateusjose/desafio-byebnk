@@ -47,6 +47,16 @@ class AtivosTestCase(ConfiguracaoDeTestes):
         self.assertEqual(dados_finais_response['nome'], 'BNB')
         self.assertEqual(dados_finais_response['modalidade'], 'CRIPTO')
 
+    def test_filtrar_ativos_pela_modalidade(self):
+        """
+        Como USUARIO eu gostaria de FILTRAR OS ATIVOS DISPONIVEIS POR TIPO para
+        que eu POSSA TER UMA MELHOR VISAO DOS ATIVOS DISPONIVEIS 
+        """
+        for modalidade in ['RENDA FIXA', 'RENDA VARIAVEL', 'CRIPTO']:
+            ativos = Ativo.objects.filter(modalidade=modalidade)
+            response = self.client.get(f'/api/ativos?modalidade={modalidade}')
+            self.assertEqual(len(response.data), ativos.count())
+
 
 class OperacoesTestCase(ConfiguracaoDeTestes):
     @classmethod

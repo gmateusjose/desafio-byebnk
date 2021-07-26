@@ -7,8 +7,14 @@ from .serializers import AtivoSerializer, OperacaoSerializer
 
 
 class AtivosView(generics.ListCreateAPIView):
-	queryset = Ativo.objects.all()
 	serializer_class = AtivoSerializer
+
+	def get_queryset(self):
+		queryset = Ativo.objects.all()
+		modalidade = self.request.query_params.get('modalidade')
+		if modalidade is not None:
+			queryset = queryset.filter(modalidade=modalidade.upper())
+		return queryset
 
 
 # TODO: NAO PERMITIR QUE SEJA FEITA MAIS RESGATES DO QUE APLICACOES, IMPEDINDO O
