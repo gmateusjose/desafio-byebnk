@@ -4,12 +4,20 @@ from rest_framework import status
 from api.models import User, Ativo, Operacao
 
 
+#TODO: TESTAR NOVA INTERFACE DA CARTEIRA E IMPLEMENTAR TESTE QUE CONFIRME
+# QUE O USUARIO NAO POSSA FAZER RESGATE DE UMA QUANTIDADE MAIOR QUE TENHA
+# EM SUA CARTEIRA.
+
 class ConfiguracaoDeTestes(APITestCase):
     @classmethod
     def setUpTestData(cls):
         cls.usuario = User.objects.create(username="user", password="abc123")
         cls.usuario.save()
-        cls.ativo = Ativo.objects.create(nome="BNB", modalidade='CRIPTO')
+        cls.ativo = Ativo.objects.create(
+            nome="BNB", 
+            modalidade='CRIPTO',
+            preco_mercado_em_centavos=100
+        )
         cls.ativo.save()
 
     def setUp(self):
@@ -23,7 +31,11 @@ class AtivosTestCase(ConfiguracaoDeTestes):
         APLICACOES/RESGATES.
         """
         novo_total_ativos = 2
-        dados_ativo = {'nome': 'BTC', 'modalidade': 'CRIPTO'}
+        dados_ativo = {
+            'nome': 'BTC', 
+            'modalidade': 'CRIPTO', 
+            'preco_mercado_em_centavos': 100
+        }
         response = self.client.post('/api/ativos', dados_ativo)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Ativo.objects.count(), novo_total_ativos)

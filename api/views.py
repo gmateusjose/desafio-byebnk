@@ -6,6 +6,12 @@ from .models import Ativo, Operacao, User
 from .serializers import AtivoSerializer, OperacaoSerializer
 
 
+# TODO: NAO PERMITIR QUE SEJA FEITA MAIS RESGATES DO QUE APLICACOES, IMPEDINDO O
+# SALDO NEGATIVO!!!
+
+# TODO: IMPLEMENTAR NOVO MODELO DE CARTEIRA, QUE MOSTRA O SALDO ATUAL SEGUNDO O 
+# MERCADO E O LUCRO OU PREJUIZO DA CARTEIRA DO USUARIO.
+
 class AtivosView(generics.ListCreateAPIView):
 	serializer_class = AtivoSerializer
 
@@ -17,8 +23,6 @@ class AtivosView(generics.ListCreateAPIView):
 		return queryset
 
 
-# TODO: NAO PERMITIR QUE SEJA FEITA MAIS RESGATES DO QUE APLICACOES, IMPEDINDO O
-# SALDO NEGATIVO!!!
 class OperacoesView(generics.ListCreateAPIView):
 	# Aplicar filter diretamente não funcionaria uma vez que o request não está
 	# definido no momento da declaração da classe, e como o request é uma property

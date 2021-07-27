@@ -20,7 +20,8 @@ class TestAtivoModel(TestCase):
         for modalidade in self.modalidades_disponiveis:
             ativo_avulso = Ativo.objects.create(
                 nome=self.nome_ativo, 
-                modalidade=modalidade
+                modalidade=modalidade,
+                preco_mercado_em_centavos=100
             )
             ativo_avulso.save()
         total_ativos = Ativo.objects.count()
@@ -35,7 +36,8 @@ class TestAtivoModel(TestCase):
             ValidationError, 
             Ativo.objects.create, 
             nome=self.nome_ativo, 
-            modalidade='NOT EXISTENT'
+            modalidade='NOT EXISTENT',
+            preco_mercado_em_centavos=100
         )
     
     def test_salvar_ativo_com_modalidade_nao_disponivel(self):
@@ -45,7 +47,8 @@ class TestAtivoModel(TestCase):
         """
         ativo_avulso = Ativo.objects.create(
             nome=self.nome_ativo, 
-            modalidade='CRIPTO'
+            modalidade='CRIPTO',
+            preco_mercado_em_centavos=100
         )
         ativo_avulso.save()
         ativo_avulso.modalidade = 'NOT EXISTENT'
@@ -56,7 +59,10 @@ class TestOperacaoModel(TestCase):
     @classmethod
     def setUpTestData(cls):
         usuario = User.objects.create(username='user', password='abc123')
-        ativo_avulso = Ativo.objects.create(nome='BNB', modalidade='CRIPTO')
+        ativo_avulso = Ativo.objects.create(
+            nome='BNB', 
+            modalidade='CRIPTO',
+            preco_mercado_em_centavos=100)
         usuario.save() 
         ativo_avulso.save()
         cls.operacoes_disponiveis = ['APLICACAO', 'RESGATE']
