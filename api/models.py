@@ -55,7 +55,17 @@ class Operacao(models.Model):
 class Taxa(models.Model):
 	nome = models.CharField(max_length=64)
 	ativo = models.ForeignKey('Ativo', on_delete=models.PROTECT)
-	percentual = models.PositiveSmallIntegerField(validators=[MaxValueValidator(100)])
+	percentual = models.PositiveSmallIntegerField(
+		validators=[MaxValueValidator(100)]
+	)
 
 	def __str__(self):
 		return f"{self.nome.title()}"
+
+	def clean(self):
+		if self.percentual > 100:
+			raise ValidationError("Percentual must be less than or equals to 100")
+	
+	def save(self, *args, **kwargs):
+		self.clean()
+		super().save(*args, **kwargs)

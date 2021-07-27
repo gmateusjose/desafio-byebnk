@@ -1,6 +1,6 @@
 from django.test import TestCase
 from django.core.exceptions import ValidationError
-from api.models import Ativo, Operacao, User
+from api.models import Ativo, Operacao, User, Taxa
 
 
 class TestAtivoModel(TestCase):
@@ -96,4 +96,25 @@ class TestOperacaoModel(TestCase):
             Operacao.objects.create, 
             operacao='NOT EXISTENT', 
             **self.dados_base
+        )
+
+
+class TestTaxaModel(TestCase):
+    def testar_validacao_de_taxa(self):
+        """
+        A taxa incidida sobre qualquer ativo nao podera ultrapassar 100%
+        """
+        ativo = Ativo.objects.create(
+            nome='Ativo Teste',
+            modalidade='RENDA FIXA',
+            preco_mercado_em_centavos=100
+        )
+        ativo.save()
+
+        self.assertRaises(
+            ValidationError,
+            Taxa.objects.create,
+            nome='Teste Taxa',
+            ativo=ativo,
+            percentual=150
         )

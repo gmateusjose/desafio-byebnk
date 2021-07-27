@@ -1,7 +1,7 @@
 from rest_framework.test import APITestCase
 from rest_framework import status
 
-from api.models import User, Ativo, Operacao
+from api.models import User, Ativo, Operacao, Taxa
 
 
 #TODO: TESTAR NOVA INTERFACE DA CARTEIRA E IMPLEMENTAR TESTE QUE CONFIRME
@@ -155,27 +155,87 @@ class CarteiraTestCase(ConfiguracaoDeTestes):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-        dados_base_operacao = {
-            'usuario': cls.usuario,
-            'ativo': cls.ativo,
-            'quantidade': 20,
-            'preco_unitario_em_centavos': 100
-        }
-
-        aplicacao = Operacao.objects.create(
-            operacao='APLICACAO', 
-            **dados_base_operacao
+        cls.btc = Ativo.objects.create(
+            nome='BTC',
+            modalidade='CRIPTO',
+            preco_mercado_em_centavos=50*100
         )
-        aplicacao.save()
+        cls.btc.save()
 
-        dados_base_operacao['quantidade'] = 10
-        dados_base_operacao['preco_unitario_em_centavos'] = 50
-        resgate = Operacao.objects.create(
-            operacao='RESGATE',
-            **dados_base_operacao
+        cls.cdi = Ativo.objects.create(
+            nome='CDI',
+            modalidade='RENDA FIXA',
+            preco_mercado_em_centavos=30*100
         )
-        resgate.save()
+        cls.cdi.save()
 
+        cls.fii = Ativo.objects.create(
+            nome='FII',
+            modalidade='RENDA VARIAVEL',
+            preco_mercado_em_centavos=60*100
+        )
+        cls.fii.save()
+
+        cls.taxa_btc = Taxa.objects.create(
+            nome='TAXA BTC',
+            ativo=cls.btc,
+            percentual=1,
+        )
+        cls.taxa_btc.save()
+
+        cls.taxa_cdi = Taxa.objects.create(
+            nome='TAXA CDI',
+            ativo=cls.cdi,
+            percentual=5
+        )
+        cls.taxa_cdi.save()
+
+        cls.taxa_fii = Taxa.objects.create(
+            nome='TAXA FII',
+            ativo=cls.fii,
+            percentual=3
+        )
+        cls.taxa_fii.save()
+
+        cls.operacao1 = Operacao.objects.create(
+            usuario=cls.usuario,
+            operacao="APLICACAO",
+            ativo=cls.btc,
+            quantidade=10,
+            preco_unitario_em_centavos=30*100,
+        )
+
+        cls.operacao2 = Operacao.objects.create(
+            usuario=cls.usuario,
+            operacao="APLICACAO",
+            ativo=cls.cdi,
+            quantidade=8,
+            preco_unitario_em_centavos=50*100
+        )
+
+        cls.operacao3 = Operacao.objects.create(
+            usuario=cls.usuario,
+            operacao="APLICACAO",
+            ativo=cls.fii,
+            quantidade=5,
+            preco_unitario_em_centavos=50*100,
+        )
+
+        cls.operacao4 = Operacao.objects.create(
+            usuario=cls.usuario,
+            operacao="RESGATE",
+            ativo=cls.btc,
+            quantidade=3,
+            preco_unitario_em_centavos=20*100
+        )
+
+        cls.operacao5 = Operacao.objects.create(
+            usuario=cls.usuario,
+            operacao="RESGATE",
+            ativo=cls.cdi,
+            quantidade=3,
+            preco_unitario_em_centavos=20*100
+        )
     def setUp(self):
         super().setUp()
         self.response = self.client.get('/api/carteira')
@@ -192,18 +252,29 @@ class CarteiraTestCase(ConfiguracaoDeTestes):
         Como USUARIO gostaria de VISUALIZAR O SALDO DA MINHA CARTEIRA para 
         ACOMPANHAR OS MEUS RESULTADOS.
         """
-        saldo_final_manualmente_calculado = 1500
+        saldo_final_manualmente_calculado = 78000
         self.assertEqual(
             self.response.data['saldo'], 
             saldo_final_manualmente_calculado
         )
     
+    def test_visualizar_lucro_ou_prejuizo_carteira(self):
+        """
+        Como USUARIO gostaria de VERIFICAR SE OBTIVE LUCRO OU PREJUIZO para
+        que eu POSSA AVALIAR MEU DESEMPENHO GERAL
+        """
+        resultado_final_manualmente_calculado = -2310
+        self.assertEqual(
+            self.response.data['resultado'],
+            resultado_final_manualmente_calculado
+        )
+
     def test_visualizar_total_de_aplicacoes(self):
         """
         Como USUARIO gostaria de VISUALIZAR O TOTAL DE APLICACOES REALIZADAS
         para TER UM ENTENDIMENTO MELHOR DAS OPERACOES
         """
-        total_aplicacoes = 1
+        total_aplicacoes = 3
         self.assertEqual(self.response.data['aplicacoes'], total_aplicacoes)
     
     def test_visualizar_total_de_resgates(self):
@@ -211,7 +282,7 @@ class CarteiraTestCase(ConfiguracaoDeTestes):
         Como USUARIO gostaria de VISUALIZAR O TOTAL DE RESGATES REALIZADOS para
         TER UM ENTENDIMENTO MELHOR DAS OPERACOES
         """
-        total_resgates = 1
+        total_resgates = 2
         self.assertEqual(self.response.data['resgates'], total_resgates)
 
     def test_usuario_visualizar_apenas_sua_carteira(self):
