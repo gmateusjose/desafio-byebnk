@@ -4,20 +4,19 @@ from rest_framework import status
 from api.models import User, Ativo, Operacao, Taxa
 
 
-#TODO: IMPLEMENTAR TESTE QUE CONFIRME
-# QUE O USUARIO NAO POSSA FAZER RESGATE DE UMA QUANTIDADE MAIOR QUE TENHA
-# EM SUA CARTEIRA.
-
 class ConfiguracaoDeTestes(APITestCase):
     @classmethod
     def setUpTestData(cls):
+        cls.ativo_generico = {
+            'nome': 'BNB',
+            'modalidade': 'CRIPTO',
+            'preco_mercado_em_centavos': 100
+        }
+
         cls.usuario = User.objects.create(username="user", password="abc123")
         cls.usuario.save()
-        cls.ativo = Ativo.objects.create(
-            nome="BNB", 
-            modalidade='CRIPTO',
-            preco_mercado_em_centavos=100
-        )
+
+        cls.ativo = Ativo.objects.create(**cls.ativo_generico)
         cls.ativo.save()
 
     def setUp(self):
@@ -25,18 +24,20 @@ class ConfiguracaoDeTestes(APITestCase):
 
 
 class AtivosTestCase(ConfiguracaoDeTestes):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.base_url = '/api/ativos'
+
     def test_cadastro_com_nome_e_modalidade_corretos(self):
         """
-        Como USUARIO eu gostaria de CADASTRAR UM ATIVO para REAZLIZAR 
+        Como USUARIO eu gostaria de CADASTRAR UM ATIVO para REAZLIZAR
         APLICACOES/RESGATES.
         """
+        self.ativo_generico['nome'] = 'BTC'
+        response = self.client.post(self.base_url, self.ativo_generico)
+
         novo_total_ativos = 2
-        dados_ativo = {
-            'nome': 'BTC', 
-            'modalidade': 'CRIPTO', 
-            'preco_mercado_em_centavos': 100
-        }
-        response = self.client.post('/api/ativos', dados_ativo)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Ativo.objects.count(), novo_total_ativos)
 
@@ -45,7 +46,7 @@ class AtivosTestCase(ConfiguracaoDeTestes):
         Como USUARIO gostaria de ACESSAR TODOS OS ATIVOS QUE JA OPEREI para
         COMPREENDER A SITUACAO DOS MEUS INVESTIMENTOS.
         """
-        response = self.client.get('/api/ativos')
+        response = self.client.get(self.base_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_visualizar_todos_ativos_cadastrados(self):
@@ -53,7 +54,7 @@ class AtivosTestCase(ConfiguracaoDeTestes):
         Como USUARIO eu gostaria de VISUALIZAR TODOS OS DADOS DOS ATIVOS para
         SABER AS OPCOES DISPONIVEIS PARA APLICACAO
         """
-        response = self.client.get('/api/ativos')
+        response = self.client.get(self.base_url)
         dados_finais_response = response.data[0]
         self.assertEqual(dados_finais_response['id'], 1)
         self.assertEqual(dados_finais_response['nome'], 'BNB')
@@ -62,18 +63,24 @@ class AtivosTestCase(ConfiguracaoDeTestes):
     def test_filtrar_ativos_pela_modalidade(self):
         """
         Como USUARIO eu gostaria de FILTRAR OS ATIVOS DISPONIVEIS POR TIPO para
-        que eu POSSA TER UMA MELHOR VISAO DOS ATIVOS DISPONIVEIS 
+        que eu POSSA TER UMA MELHOR VISAO DOS ATIVOS DISPONIVEIS
         """
-        for modalidade in ['RENDA FIXA', 'RENDA VARIAVEL', 'CRIPTO']:
+        modalidades_disponiveis = ['RENDA FIXA', 'RENDA VARIAVEL', 'CRIPTO']
+        for modalidade in modalidades_disponiveis:
             ativos = Ativo.objects.filter(modalidade=modalidade)
-            response = self.client.get(f'/api/ativos?modalidade={modalidade}')
-            self.assertEqual(len(response.data), ativos.count())
+            response = self.client.get(
+                f'{self.base_url}?modalidade={modalidade}'
+            )
+            qtd_ativos_retornados = len(response.data)
+
+            self.assertEqual(qtd_ativos_retornados, ativos.count())
 
 
 class OperacoesTestCase(ConfiguracaoDeTestes):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
+        cls.base_url = '/api/operacoes'
         cls.dados_base_operacao = {
             'usuario': cls.usuario,
             'ativo': cls.ativo,
@@ -88,13 +95,13 @@ class OperacoesTestCase(ConfiguracaoDeTestes):
 
     def test_realizar_aplicacao_em_ativo(self):
         """
-        Como um USUARIO eu gostaria de FAZER APLICACOES EM UM ATIVO para 
+        Como um USUARIO eu gostaria de FAZER APLICACOES EM UM ATIVO para
         INICIAR UM INVESTIMENTO
         """
         novo_total_operacoes = 2
         self.dados_base_operacao['ativo'] = self.ativo.id
         self.dados_base_operacao['operacao'] = 'APLICACAO'
-        response = self.client.post('/api/operacoes', self.dados_base_operacao)
+        response = self.client.post(self.base_url, self.dados_base_operacao)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Operacao.objects.count(), novo_total_operacoes)
 
@@ -106,23 +113,24 @@ class OperacoesTestCase(ConfiguracaoDeTestes):
         novo_total_operacoes = 2
         self.dados_base_operacao['operacao'] = 'RESGATE'
         self.dados_base_operacao['ativo'] = self.ativo.id
-        response = self.client.post('/api/operacoes', self.dados_base_operacao)
+        response = self.client.post(self.base_url, self.dados_base_operacao)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Operacao.objects.count(), novo_total_operacoes)
 
     def test_realizar_resgate_com_quantidade_maior_que_a_disponivel(self):
         """
-        O USUARIO nao pode realizar um resgate em quantidade maior do que a disponivel
+        O USUARIO nao pode realizar um resgate em quantidade maior do que a 
+        disponivel
         """
         self.dados_base_operacao['operacao'] = 'RESGATE'
         self.dados_base_operacao['ativo'] = self.ativo.id
         self.dados_base_operacao['quantidade'] = 4
-        response = self.client.post('/api/operacoes', self.dados_base_operacao)
+        response = self.client.post(self.base_url, self.dados_base_operacao)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_realizar_aplicacao_em_ativo_de_outro_usuario(self):
         """
-        Como USUARIO eu gostaria de FAZER APLICACOES EM UM ATIVO DE OUTRO 
+        Como USUARIO eu gostaria de FAZER APLICACOES EM UM ATIVO DE OUTRO
         USUARIO para RETIRAR O MEU LUCRO.
         """
         second_user = User.objects.create(username='user2', password='abc123')
@@ -131,7 +139,7 @@ class OperacoesTestCase(ConfiguracaoDeTestes):
 
         self.dados_base_operacao['operacao'] = 'APLICACAO'
         self.dados_base_operacao['ativo'] = self.ativo.id
-        response = self.client.post('/api/operacoes', self.dados_base_operacao)
+        response = self.client.post(self.base_url, self.dados_base_operacao)
 
         novo_total_operacoes = 2
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -142,8 +150,8 @@ class OperacoesTestCase(ConfiguracaoDeTestes):
         Como USUARIO eu gostaria de VISUALIZAR APENAS MINHAS OPERACOES
         para ATESTAR A SEGURANCA DA APLICACAO
         """
-        response = self.client.get('/api/operacoes')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)        
+        response = self.client.get(self.base_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         for response_item in response.data:
             operacao_id = response_item['id']
             operacao = Operacao.objects.get(pk=operacao_id)
@@ -157,7 +165,7 @@ class OperacoesTestCase(ConfiguracaoDeTestes):
         endereco_ip_client = self.client._base_environ()['REMOTE_ADDR']
         self.dados_base_operacao['operacao'] = 'RESGATE'
         self.dados_base_operacao['ativo'] = self.ativo.id
-        response = self.client.post('/api/operacoes', self.dados_base_operacao)
+        response = self.client.post(self.base_url, self.dados_base_operacao)
         self.assertEqual(response.data['endereco_ip'], endereco_ip_client)
 
 
@@ -165,52 +173,48 @@ class CarteiraTestCase(ConfiguracaoDeTestes):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-        cls.btc = Ativo.objects.create(
-            nome='BTC',
-            modalidade='CRIPTO',
-            preco_mercado_em_centavos=50*100
-        )
-        cls.btc.save()
+        cls.base_url = '/api/carteira'
 
-        cls.cdi = Ativo.objects.create(
-            nome='CDI',
-            modalidade='RENDA FIXA',
-            preco_mercado_em_centavos=30*100
-        )
-        cls.cdi.save()
+        dados_a_cadastrar = [
+            {
+                'nome': 'BTC',
+                'modalidade': 'CRIPTO',
+                'preco_mercado_em_centavos': 50*100,
+                'taxa_associada': 1
+            },
+            {
+                'nome': 'CDI',
+                'modalidade': 'RENDA FIXA',
+                'preco_mercado_em_centavos': 30*100,
+                'taxa_associada': 5
+            },
+            {
+                'nome': 'FII',
+                'modalidade': 'RENDA VARIAVEL',
+                'preco_mercado_em_centavos': 60*100,
+                'taxa_associada': 3
+            }
+        ]
 
-        cls.fii = Ativo.objects.create(
-            nome='FII',
-            modalidade='RENDA VARIAVEL',
-            preco_mercado_em_centavos=60*100
-        )
-        cls.fii.save()
+        for ativo in dados_a_cadastrar:
+            ativo_cadastrado = Ativo.objects.create(
+                nome=ativo['nome'],
+                modalidade=ativo['modalidade'],
+                preco_mercado_em_centavos=ativo['preco_mercado_em_centavos']
+            )
+            ativo_cadastrado.save()
 
-        cls.taxa_btc = Taxa.objects.create(
-            nome='TAXA BTC',
-            ativo=cls.btc,
-            percentual=1,
-        )
-        cls.taxa_btc.save()
-
-        cls.taxa_cdi = Taxa.objects.create(
-            nome='TAXA CDI',
-            ativo=cls.cdi,
-            percentual=5
-        )
-        cls.taxa_cdi.save()
-
-        cls.taxa_fii = Taxa.objects.create(
-            nome='TAXA FII',
-            ativo=cls.fii,
-            percentual=3
-        )
-        cls.taxa_fii.save()
+            taxa_cadastrada = Taxa.objects.create(
+                nome=f"Taxa {ativo['nome']}",
+                ativo=ativo_cadastrado,
+                percentual=ativo['taxa_associada']
+            )
+            taxa_cadastrada.save()
 
         cls.operacao1 = Operacao.objects.create(
             usuario=cls.usuario,
             operacao="APLICACAO",
-            ativo=cls.btc,
+            ativo=Ativo.objects.get(nome='BTC'),
             quantidade=10,
             preco_unitario_em_centavos=30*100,
         )
@@ -218,7 +222,7 @@ class CarteiraTestCase(ConfiguracaoDeTestes):
         cls.operacao2 = Operacao.objects.create(
             usuario=cls.usuario,
             operacao="APLICACAO",
-            ativo=cls.cdi,
+            ativo=Ativo.objects.get(nome='CDI'),
             quantidade=8,
             preco_unitario_em_centavos=50*100
         )
@@ -226,7 +230,7 @@ class CarteiraTestCase(ConfiguracaoDeTestes):
         cls.operacao3 = Operacao.objects.create(
             usuario=cls.usuario,
             operacao="APLICACAO",
-            ativo=cls.fii,
+            ativo=Ativo.objects.get(nome='FII'),
             quantidade=5,
             preco_unitario_em_centavos=50*100,
         )
@@ -234,7 +238,7 @@ class CarteiraTestCase(ConfiguracaoDeTestes):
         cls.operacao4 = Operacao.objects.create(
             usuario=cls.usuario,
             operacao="RESGATE",
-            ativo=cls.btc,
+            ativo=Ativo.objects.get(nome='BTC'),
             quantidade=3,
             preco_unitario_em_centavos=20*100
         )
@@ -242,13 +246,14 @@ class CarteiraTestCase(ConfiguracaoDeTestes):
         cls.operacao5 = Operacao.objects.create(
             usuario=cls.usuario,
             operacao="RESGATE",
-            ativo=cls.cdi,
+            ativo=Ativo.objects.get(nome='CDI'),
             quantidade=3,
             preco_unitario_em_centavos=20*100
         )
+
     def setUp(self):
         super().setUp()
-        self.response = self.client.get('/api/carteira')
+        self.response = self.client.get(self.base_url)
 
     def test_acessar_carteira(self):
         """
@@ -264,7 +269,7 @@ class CarteiraTestCase(ConfiguracaoDeTestes):
         """
         saldo_final_manualmente_calculado = 78000
         self.assertEqual(
-            self.response.data['saldo'], 
+            self.response.data['saldo'],
             saldo_final_manualmente_calculado
         )
     
