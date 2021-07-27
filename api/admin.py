@@ -13,6 +13,7 @@ class OperacaoAdmin(admin.ModelAdmin):
 class TaxaAdmin(admin.ModelAdmin):
     list_display = ('nome', 'ativo', 'percentual')
 
+
 admin.site.register(Ativo, AtivoAdmin)
 admin.site.register(Operacao, OperacaoAdmin)
 admin.site.register(Taxa, TaxaAdmin)
