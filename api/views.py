@@ -2,6 +2,7 @@ from django.core.exceptions import ValidationError
 from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.exceptions import ParseError
 
 from .models import Ativo, Operacao, User, Taxa
 from .serializers import AtivoSerializer, OperacaoSerializer
@@ -38,7 +39,7 @@ class OperacoesView(generics.ListCreateAPIView):
         qtd_esta_disponivel = (cotas_disponiveis < cotas_requisitadas)
 
         if qtd_esta_disponivel and operacao_selecionada == 'RESGATE':
-            raise ValidationError('qtd requisitada > qtd disponivel')
+            raise ParseError('qtd requisitada > qtd disponivel')
         else:
             serializer.save()
 
@@ -52,12 +53,6 @@ class OperacoesView(generics.ListCreateAPIView):
             qtd_cotas = operacao.quantidade
             sum += qtd_cotas
         return sum
-
-    def handle_exception(self, exc):
-        return Response(
-            {'ERROR': 'Cotas solicitadas excedem as cotas disponiveis'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
 
 		
 class CarteiraView(APIView):
