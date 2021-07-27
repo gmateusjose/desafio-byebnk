@@ -4,7 +4,7 @@ from rest_framework import status
 from api.models import User, Ativo, Operacao, Taxa
 
 
-#TODO: TESTAR NOVA INTERFACE DA CARTEIRA E IMPLEMENTAR TESTE QUE CONFIRME
+#TODO: IMPLEMENTAR TESTE QUE CONFIRME
 # QUE O USUARIO NAO POSSA FAZER RESGATE DE UMA QUANTIDADE MAIOR QUE TENHA
 # EM SUA CARTEIRA.
 
@@ -109,6 +109,16 @@ class OperacoesTestCase(ConfiguracaoDeTestes):
         response = self.client.post('/api/operacoes', self.dados_base_operacao)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Operacao.objects.count(), novo_total_operacoes)
+
+    def test_realizar_resgate_com_quantidade_maior_que_a_disponivel(self):
+        """
+        O USUARIO nao pode realizar um resgate em quantidade maior do que a disponivel
+        """
+        self.dados_base_operacao['operacao'] = 'RESGATE'
+        self.dados_base_operacao['ativo'] = self.ativo.id
+        self.dados_base_operacao['quantidade'] = 4
+        response = self.client.post('/api/operacoes', self.dados_base_operacao)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_realizar_aplicacao_em_ativo_de_outro_usuario(self):
         """

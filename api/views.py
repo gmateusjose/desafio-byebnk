@@ -1,4 +1,5 @@
-from rest_framework import generics
+from django.core.exceptions import ValidationError
+from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
@@ -32,7 +33,26 @@ class OperacoesView(generics.ListCreateAPIView):
 	def get_queryset(self):
 		return Operacao.objects.filter(usuario=self.request.user)
 
+	def perform_create(self, serializer):
+		operacoes_no_ativo = Operacao.objects.filter(
+			ativo=self.request.data['ativo'],
+			usuario=self.request.user
+		)
+		quantidade_disponivel = sum([op.quantidade for op in operacoes_no_ativo])
+		quantidade_requisitada = int(self.request.data['quantidade'])
+		print(f"qtd disp {quantidade_disponivel}, qts req {quantidade_requisitada}, {self.request.data['operacao']}")
+		if (quantidade_disponivel < quantidade_requisitada) and self.request.data['operacao'] == 'RESGATE':
+			raise ValidationError('qtd requisitada > qtd disponivel')
+		else:
+			serializer.save()
 
+	def handle_exception(self, exc):
+		return Response(
+			{'ERROR': 'qtd requisitada > qtd disponivel'},
+			status=status.HTTP_400_BAD_REQUEST
+		)
+
+		
 class CarteiraView(APIView):
 	def get(self, request, format=None):
 		usuario_atual = User.objects.get(pk=request.user.id)
