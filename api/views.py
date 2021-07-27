@@ -66,8 +66,9 @@ class CarteiraView(APIView):
 
         aplicacoes_realizadas = self.calcula_aplicacoes_realizadas(request)
         resgates_realizados = self.calcula_resgates_realizados(request)
-
-        preco_mercado_aplicacoes = self.calcular_preco_mercado(aplicacoes_realizadas)
+        preco_mercado_aplicacoes = self.calcular_preco_mercado(
+            aplicacoes_realizadas
+        )
         preco_mercado_resgates = self.calcular_preco_mercado(resgates_realizados)
 		
         saldo = preco_mercado_aplicacoes - preco_mercado_resgates
