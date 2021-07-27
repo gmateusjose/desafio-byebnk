@@ -2,15 +2,12 @@ from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-from .models import Ativo, Operacao, User
+from .models import Ativo, Operacao, User, Taxa
 from .serializers import AtivoSerializer, OperacaoSerializer
 
 
 # TODO: NAO PERMITIR QUE SEJA FEITA MAIS RESGATES DO QUE APLICACOES, IMPEDINDO O
 # SALDO NEGATIVO!!!
-
-# TODO: IMPLEMENTAR NOVO MODELO DE CARTEIRA, QUE MOSTRA O SALDO ATUAL SEGUNDO O 
-# MERCADO E O LUCRO OU PREJUIZO DA CARTEIRA DO USUARIO.
 
 class AtivosView(generics.ListCreateAPIView):
 	serializer_class = AtivoSerializer
@@ -47,15 +44,44 @@ class CarteiraView(APIView):
 			operacao='RESGATE', 
 			usuario=request.user.id
 		)
-		produto = lambda operacoes: \
-			[op.quantidade * op.preco_unitario_em_centavos for op in operacoes]
-		sum_resgates = sum(produto(resgates_realizados))
-		sum_aplicacoes = sum(produto(aplicacoes_realizadas))
+		preco_mercado_aplicacoes = self.calcular_preco_mercado(aplicacoes_realizadas)
+		preco_mercado_resgates = self.calcular_preco_mercado(resgates_realizados)
+		saldo = preco_mercado_aplicacoes - preco_mercado_resgates
+
+		preco_unitario_aplicacoes = self.calcular_preco_unitario(aplicacoes_realizadas)
+		preco_unitario_resgates = self.calcular_preco_unitario(resgates_realizados)
+		precos_unitarios = preco_unitario_aplicacoes - preco_unitario_resgates
 
 		dados_carteira = {
 			'usuario': usuario_atual.username, 
-			'saldo': sum_aplicacoes - sum_resgates, 
+			'saldo': saldo,
+			'resultado': saldo - precos_unitarios, 
 			'aplicacoes': len(aplicacoes_realizadas), 
 			'resgates': len(resgates_realizados)
 		}
 		return Response(dados_carteira)
+	
+	def calcular_preco_mercado(self, operacoes):
+		preco_mercado = 0
+		for operacao in operacoes:
+			ativo = operacao.ativo
+			preco = ativo.preco_mercado_em_centavos
+			quantidade = operacao.quantidade
+			taxa = self.calcular_taxa_operacao(operacao.ativo)
+			preco_mercado += (quantidade * preco) * (1 - taxa)
+		return preco_mercado
+
+	def calcular_taxa_operacao(self, ativo):
+		taxas_sobre_ativo = Taxa.objects.filter(ativo=ativo)
+		total_percentual = sum([taxa.percentual for taxa in taxas_sobre_ativo])
+		total_decimal = total_percentual / 100
+		return total_decimal
+
+	def calcular_preco_unitario(self, operacoes):
+		total = 0
+		for operacao in operacoes:
+			quantidade = operacao.quantidade
+			preco = operacao.preco_unitario_em_centavos
+			taxa = self.calcular_taxa_operacao(operacao.ativo)
+			total += (quantidade * preco) * (1 - taxa)
+		return total
